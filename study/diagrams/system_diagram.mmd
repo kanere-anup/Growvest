@@ -1,0 +1,151 @@
+%% High-level Razorpay system map (Phase 1)
+%% Source for the diagram embedded in architecture/system_map.md
+%% Renders directly in GitHub / VS Code / mermaid.live
+
+flowchart TB
+  classDef monolith fill:#FFE4B5,stroke:#8B4513,color:#000
+  classDef goSvc fill:#E0F0FF,stroke:#1F6FEB,color:#000
+  classDef phpSvc fill:#FFE0E0,stroke:#B22222,color:#000
+  classDef datastore fill:#F0F0F0,stroke:#555,color:#000
+  classDef kafka fill:#E8E0FF,stroke:#5A2BB6,color:#000
+  classDef ext fill:#FFF8DC,stroke:#A0522D,color:#000
+  classDef fe fill:#E0FFE0,stroke:#2E7D32,color:#000
+
+  Merchant([Merchant / Customer]):::ext
+
+  subgraph Edge["Edge / Gateway"]
+    EdgeKong[edge / Kong]:::goSvc
+    AuthSvc[auth-service<br/>OAuth 2.0]:::phpSvc
+  end
+
+  subgraph FE["Frontends"]
+    Dashboard[dashboard<br/>15 federated apps<br/>+ apps/partnership]:::fe
+    Care[frontend-care]:::fe
+  end
+
+  subgraph CorePay["Payments core"]
+    API[api<br/>PHP monolith]:::monolith
+    PGR[pg-router]:::goSvc
+    Route[route<br/>UPI / transfers]:::goSvc
+    PCard[payments-card]:::goSvc
+    Term[terminals<br/>POS]:::goSvc
+    PGOS[pg-onboarding-service]:::goSvc
+  end
+
+  subgraph Identity["Identity / Config"]
+    AccSvc[account-service]:::goSvc
+    DCS[dcs<br/>config + flags]:::goSvc
+  end
+
+  subgraph Money["Money movement"]
+    Ledger[ledger<br/>double-entry]:::goSvc
+    Settle[settlements]:::goSvc
+  end
+
+  subgraph PartnersDomain["Partnerships domain"]
+    Part[partnerships]:::goSvc
+    CCSDK[charge-collections-sdk<br/>fee/tax library]:::goSvc
+  end
+
+  subgraph Support["Support services"]
+    Stork[stork<br/>notifications]:::goSvc
+    CMMA[cmma<br/>Camunda]:::goSvc
+    WDA[wda-service]:::goSvc
+    Report[reporting]:::phpSvc
+  end
+
+  subgraph DataPlane["Data plumbing"]
+    Maxwell[maxwell-microservice<br/>MySQL CDC]:::goSvc
+    DynaCDC[dynamo-cdc-v2<br/>Dynamo Streams CDC]:::goSvc
+    DataHub[datahub<br/>Trino+Spark+S3]:::goSvc
+  end
+
+  subgraph Stores["Datastores"]
+    MySQL[(MySQL)]:::datastore
+    PG[(PostgreSQL)]:::datastore
+    TiDB[(TiDB)]:::datastore
+    Redis[(Redis)]:::datastore
+    Dynamo[(DynamoDB)]:::datastore
+    Trino[(Trino)]:::datastore
+    ES[(ES / OpenSearch)]:::datastore
+    S3[(S3)]:::datastore
+  end
+
+  KafkaBus{{Kafka<br/>events.ledger.v2 / mysql_cdc_events_* / cdc_dynamodb_rzp_* / stage_live_*_events}}:::kafka
+
+  Merchant --> EdgeKong
+  EdgeKong --> AuthSvc
+  EdgeKong --> API
+  EdgeKong --> PGR
+  EdgeKong --> Part
+  EdgeKong --> Dashboard
+  EdgeKong --> Care
+
+  Dashboard -->|/merchant/api/{mode}| API
+  Dashboard -->|partnership app| Part
+
+  API -->|gRPC SDK| AccSvc
+  API -->|SDK| DCS
+  API --> PGR
+  API --> Stork
+
+  PGR --> AccSvc
+  PGR --> DCS
+  PGR --> Route
+  PGR --> PCard
+  PGR --> PGOS
+  PGOS --> AccSvc
+  PGOS --> DCS
+  Route --> AccSvc
+  PCard --> AccSvc
+
+  Part -->|sync provider clients| Ledger
+  Part --> PGR
+  Part --> AccSvc
+  Part --> DCS
+  Part --> WDA
+  Part --> Stork
+  Part --> Term
+  Part --> Settle
+  Part -->|fee calc| CCSDK
+
+  Settle --> Ledger
+  Report --> API
+  Report --> Stork
+  CMMA --> AccSvc
+
+  API -.->|order-update-event<br/>create-payment-transaction-event<br/>create-ledger-journal-event| KafkaBus
+  PGR -.-> KafkaBus
+  Ledger -.->|events.ledger.v2| KafkaBus
+  AccSvc -.->|outbox| KafkaBus
+  Part -.->|outbox 30+ handlers| KafkaBus
+
+  KafkaBus -.->|stage_live_*_events| Settle
+  KafkaBus -.->|merchant_activation<br/>partner_type_change<br/>create_commissions| Part
+  KafkaBus -.->|cdc_dual_write Superleap| Part
+
+  MySQL -->|binlog| Maxwell
+  Maxwell -.->|mysql_cdc_events_*| KafkaBus
+  Dynamo -->|streams| DynaCDC
+  DynaCDC -.->|cdc_dynamodb_rzp_*| KafkaBus
+
+  KafkaBus --> DataHub
+
+  API --- MySQL
+  PGR --- MySQL
+  PGR --- Redis
+  PGR --- Dynamo
+  Part --- MySQL
+  Part --- TiDB
+  Part --- Trino
+  Part --- Redis
+  Ledger --- PG
+  Settle --- PG
+  Stork --- PG
+  Route --- TiDB
+  Route --- MySQL
+  AccSvc --- MySQL
+  AccSvc --- Redis
+  WDA --- TiDB
+  WDA --- Trino
+  WDA --- ES

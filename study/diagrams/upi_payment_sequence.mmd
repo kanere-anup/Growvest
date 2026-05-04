@@ -1,0 +1,60 @@
+%% UPI payment end-to-end sequence
+%% Source for the diagram embedded in payments/payment_flow_upi.md
+%% Renders directly in GitHub / VS Code / mermaid.live
+
+sequenceDiagram
+    autonumber
+    participant Cust as Customer / Checkout SDK
+    participant Edge as edge / Kong
+    participant API as api (Laravel)
+    participant PGR as pg-router
+    participant Opt as Optimizer
+    participant GW as UPI gateway<br/>(ICICI / Yes / Mindgate / etc.)
+    participant NPCI as NPCI / PSP
+    participant Cap as api capture
+    participant Ldg as ledger
+    participant Stl as settlements
+
+    Cust->>Edge: POST /v1/payments/create/ajax<br/>(method=upi, amount, order_id, vpa)
+    Edge->>API: route by Kong
+    API->>API: PaymentCreateController.postAJAX()<br/>app/Http/Controllers/PaymentCreateController.php:49
+    API->>API: Service.process() →<br/>Processor.process()
+    API->>API: canRouteThroughUpsRearchFlow(input, isUpiDfb)<br/>Processor.php:6204
+    Note over API: UPI eligibility:<br/>method=upi, non-recurring, non-TPV
+    API->>PGR: PGRouter.validateAndCreatePaymentUpi(input)<br/>POST /v1/payments/create/upi<br/>app/Services/PGRouter.php:240, 90s timeout
+
+    PGR->>PGR: routing/server.go:266<br/>PaymentCreateController
+    PGR->>PGR: setMethod="upi"<br/>routing/controller.go:129
+    PGR->>PGR: GetOrderV1AndOrderMapFromRequest()<br/>core/order_accessor.go:108
+    PGR->>Opt: selectProvider(ctx, finalRequest)<br/>core/optimizer.go:216
+    Opt-->>PGR: ProviderResponse{gateway, provider_id}
+    PGR->>PGR: persist outbox row (outbox_jobs)<br/>pgsdk/outbox/outbox.go:23
+    PGR-->>API: payment created (gateway selected)
+
+    API->>GW: build UPI request (signed)<br/>app/Gateway/Upi/<psp>/...
+    GW->>NPCI: collect / intent
+    NPCI-->>Cust: VPA approval prompt / deep link
+    Cust->>NPCI: approves
+    NPCI->>GW: payment confirmation
+    GW->>API: server callback<br/>POST /v1/payments/{id}/callback/{hash}<br/>(or /gateway/upi_<psp>/callback)
+
+    API->>Cap: GatewayController.processServerCallback()<br/>GatewayController.php:117
+    Cap->>Cap: Capture.coreCapture(payment, input)<br/>Capture.php:75
+    Cap->>Cap: updatePaymentCaptured()<br/>set status=CAPTURED, captured_at, refund_at=null<br/>Capture.php:1842-1850
+    Cap->>Cap: createTransactionFromCapturedPayment()<br/>Capture.php:1862
+    Cap->>Cap: dispatch event api.payment.captured<br/>Capture.php:1838
+    Cap->>Cap: dispatch event api.order.paid<br/>Capture.php:1735
+
+    Cap->>Ldg: LedgerEntryJob.dispatchNow()<br/>topic create-ledger-journal-event<br/>Capture.php:516
+    Ldg->>Ldg: JournalAPI.Create<br/>internal/journal/server.go:38<br/>mutex on (transactor_event, transactor_id)
+    Ldg->>Ldg: Core.Create()<br/>internal/journal/core.go:205-349
+    Ldg->>Ldg: write journal + ledger_entries + outbox<br/>(single DB tx)
+    Ldg->>Ldg: SendToOutbox(broker=kafka)<br/>pkg/outbox/core.go:57-79
+    Ldg-->>Cap: journal created
+
+    Cap->>Stl: dispatchForSettlementBucketing(txn)<br/>Capture.php:1551
+    Note over Stl: settlements consumes payment events<br/>(see "Open Question" in doc)
+    Stl->>Stl: Settlement.Create(req, eligibleFrom)<br/>internal/settlement/core.go:285
+    Stl->>Stl: merchantConfig.GetSettlementEnabledByParams<br/>core.go:339
+    Stl->>Stl: processor.Process()<br/>(default / aggregate / txn-level)
+    Stl-->>Cap: settlement state updated
