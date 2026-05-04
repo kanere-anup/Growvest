@@ -1,0 +1,16 @@
+<svg width="180" height="40" viewBox="0 0 180 40" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Growvest (light)">
+  <defs>
+    <linearGradient id="gv-grad-light" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#7FBAFF"/>
+      <stop offset="100%" stop-color="#7BE07A"/>
+    </linearGradient>
+  </defs>
+  <!-- Stylized chart/arrow mark -->
+  <g transform="translate(6,6)">
+    <polyline points="0,20 18,12 26,16 36,6" fill="none" stroke="url(#gv-grad-light)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <polygon points="36,6 33,10 43,10" fill="url(#gv-grad-light)"/>
+  </g>
+  <!-- Wordmark: 'Grow' in white for dark backgrounds, 'vest' in bright gradient -->
+  <text x="56" y="27" font-family="Segoe UI, system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#FFFFFF">Grow</text>
+  <text x="104" y="27" font-family="Segoe UI, system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="url(#gv-grad-light)">vest</text>
+</svg>

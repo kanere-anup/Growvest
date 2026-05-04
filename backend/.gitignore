@@ -1,0 +1,19 @@
+# Frontend dependencies
+frontend/node_modules/
+
+# Frontend build artifacts
+frontend/build/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs and exports
+logs/
+exports/
+
+# Local data and databases
+data/
+*.db
