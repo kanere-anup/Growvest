@@ -1,0 +1,29 @@
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+dist/
+build/
+
+# Go
+*.o
+*.a
+*.so
+__pycache__
+*.egg-info/
+.env
+
+# Dependencies
+vendor/
+
+# OS
+.DS_Store
+Thumbs.db
