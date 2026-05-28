@@ -1,0 +1,753 @@
+openapi: 3.0.3
+info:
+  title: Growvest Stock Screener API
+  description: API for stock screening with configurable technical analysis strategies
+  version: 1.0.0
+  contact:
+    name: Growvest
+servers:
+  - url: http://localhost:8080
+    description: Local development
+
+tags:
+  - name: Auth
+    description: Authentication and user management
+  - name: Stocks
+    description: Stock data and watchlist
+  - name: Strategies
+    description: Screening strategy configuration
+  - name: Scans
+    description: Scan execution and results
+  - name: Analytics
+    description: Performance analytics
+  - name: Admin
+    description: Admin-only operations
+  - name: System
+    description: Health and readiness checks
+
+paths:
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  services:
+                    type: object
+
+  /ready:
+    get:
+      tags: [System]
+      summary: Readiness check
+      responses:
+        '200':
+          description: Service is ready
+
+  /ws/scans:
+    get:
+      tags: [System]
+      summary: WebSocket endpoint for live scan progress
+      description: |
+        Connect via WebSocket to receive real-time scan progress updates.
+        Optional query param `scan_id` to filter updates for a specific scan.
+        Messages are JSON: `{"type": "scan_progress", "payload": {...}}`
+      parameters:
+        - name: scan_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+
+  /api/v1/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          description: Email already exists
+
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login and get session cookies
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful (sets access_token, refresh_token, csrf_token cookies)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Invalid credentials
+
+  /api/v1/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      responses:
+        '200':
+          description: Token refreshed
+
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout and revoke session
+      responses:
+        '200':
+          description: Logged out
+
+  /api/v1/auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current user profile
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+
+  /api/v1/stocks:
+    get:
+      tags: [Stocks]
+      summary: List stocks
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: exchange
+          in: query
+          schema: { type: string }
+        - name: sector
+          in: query
+          schema: { type: string }
+        - name: order_by
+          in: query
+          schema: { type: string, enum: [symbol, name, sector, market_cap, exchange, created_at] }
+      responses:
+        '200':
+          description: Paginated stock list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Stock'
+                  total:
+                    type: integer
+
+  /api/v1/stocks/{id}:
+    get:
+      tags: [Stocks]
+      summary: Get stock by ID
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Stock details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stock'
+
+  /api/v1/my-stocks:
+    get:
+      tags: [Stocks]
+      summary: Get user's watchlist
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Watchlist stocks
+    post:
+      tags: [Stocks]
+      summary: Add stock to watchlist
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                stock_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Added to watchlist
+
+  /api/v1/my-stocks/{id}:
+    delete:
+      tags: [Stocks]
+      summary: Remove stock from watchlist
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Removed from watchlist
+
+  /api/v1/strategies:
+    get:
+      tags: [Strategies]
+      summary: List all available strategies
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Strategy list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Strategy'
+
+  /api/v1/strategies/{id}:
+    get:
+      tags: [Strategies]
+      summary: Get strategy by ID
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Strategy details
+
+  /api/v1/my-strategies:
+    get:
+      tags: [Strategies]
+      summary: List user's configured strategies
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: User strategy configurations
+    post:
+      tags: [Strategies]
+      summary: Configure a strategy for the user
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigureStrategyRequest'
+      responses:
+        '200':
+          description: Strategy configured
+
+  /api/v1/my-strategies/{id}:
+    put:
+      tags: [Strategies]
+      summary: Update user strategy configuration
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                is_enabled:
+                  type: boolean
+                parameters:
+                  type: object
+      responses:
+        '200':
+          description: Strategy updated
+    delete:
+      tags: [Strategies]
+      summary: Remove user strategy configuration
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Strategy removed
+
+  /api/v1/scans:
+    get:
+      tags: [Scans]
+      summary: List user's scans
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        '200':
+          description: Paginated scan list
+    post:
+      tags: [Scans]
+      summary: Start a new scan
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartScanRequest'
+      responses:
+        '200':
+          description: Scan started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  scan:
+                    $ref: '#/components/schemas/Scan'
+
+  /api/v1/scans/{id}:
+    get:
+      tags: [Scans]
+      summary: Get scan details
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Scan details
+    delete:
+      tags: [Scans]
+      summary: Delete a scan
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Scan deleted
+
+  /api/v1/scans/{id}/status:
+    get:
+      tags: [Scans]
+      summary: Get scan execution status
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Scan status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanStatus'
+
+  /api/v1/scans/{id}/results:
+    get:
+      tags: [Scans]
+      summary: Get scan results
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: strategy_id
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Paginated scan results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ScanResult'
+                  total:
+                    type: integer
+
+  /api/v1/scans/{id}/export:
+    get:
+      tags: [Scans]
+      summary: Export scan results as CSV
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: CSV file download
+          content:
+            text/csv: {}
+
+  /api/v1/analytics/performance:
+    get:
+      tags: [Analytics]
+      summary: Get scan performance analytics
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Performance metrics
+
+  /api/v1/analytics/top-stocks:
+    get:
+      tags: [Analytics]
+      summary: Get top-performing stocks
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Top stocks list
+
+  /api/v1/admin/stocks:
+    post:
+      tags: [Admin]
+      summary: Create a new stock (admin only)
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStockRequest'
+      responses:
+        '201':
+          description: Stock created
+
+  /api/v1/admin/stocks/{id}:
+    put:
+      tags: [Admin]
+      summary: Update a stock (admin only)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Stock updated
+    delete:
+      tags: [Admin]
+      summary: Delete a stock (admin only)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Stock deleted
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: access_token
+
+  responses:
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        full_name:
+          type: string
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        full_name:
+          type: string
+        role:
+          type: string
+          enum: [user, premium, admin]
+        is_verified:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    Stock:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        symbol:
+          type: string
+        name:
+          type: string
+        exchange:
+          type: string
+        sector:
+          type: string
+        market_cap:
+          type: number
+        is_active:
+          type: boolean
+
+    Strategy:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        display_name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        parameters:
+          type: object
+        is_system:
+          type: boolean
+        is_active:
+          type: boolean
+
+    ConfigureStrategyRequest:
+      type: object
+      required: [strategy_id]
+      properties:
+        strategy_id:
+          type: string
+          format: uuid
+        is_enabled:
+          type: boolean
+          default: true
+        parameters:
+          type: object
+
+    StartScanRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        stock_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        strategy_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    Scan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+        total_stocks:
+          type: integer
+        processed_stocks:
+          type: integer
+        successful_stocks:
+          type: integer
+        failed_stocks:
+          type: integer
+        results_count:
+          type: integer
+        execution_time_ms:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    ScanStatus:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+        processed_stocks:
+          type: integer
+        successful_stocks:
+          type: integer
+        failed_stocks:
+          type: integer
+        execution_time_ms:
+          type: integer
+
+    ScanResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        symbol:
+          type: string
+        current_price:
+          type: number
+        score:
+          type: number
+        signal:
+          type: string
+          enum: [buy, sell, hold, neutral]
+        result_data:
+          type: object
+        strategy:
+          $ref: '#/components/schemas/Strategy'
+
+    CreateStockRequest:
+      type: object
+      required: [symbol, exchange]
+      properties:
+        symbol:
+          type: string
+        name:
+          type: string
+        exchange:
+          type: string
+        sector:
+          type: string

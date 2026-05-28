@@ -4,26 +4,41 @@
 *.swp
 *.swo
 *~
-.DS_Store
 
 # Node
 node_modules/
 npm-debug.log
 yarn-error.log
-dist/
-build/
 
-# Go
+# Go binaries
+bin/
 *.o
 *.a
 *.so
-__pycache__
-*.egg-info/
+*.exe
+
+# Build output
+dist/
+build/
+
+# Environment files (contain secrets)
 .env
+.env.local
+.env.production
 
 # Dependencies
 vendor/
+__pycache__/
+*.egg-info/
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+
+# Coverage
+coverage/
+*.out
+project/go-backend/api

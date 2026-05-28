@@ -1,0 +1,6 @@
+bin/
+.env
+*.out
+*.html
+.git
+.gitignore
