@@ -74,24 +74,14 @@ func (h *BacktestHandler) RunBacktest(c *gin.Context) {
 	}
 
 	fromDate := time.Now().AddDate(0, 0, -req.LookbackDays)
-	cacheKey := cache.MarketDataKey(req.Symbol)
+	toDate := time.Now()
 
-	var historicalData []marketdata.HistoricalData
-
-	if h.cache != nil {
-		_ = h.cache.Get(c.Request.Context(), cacheKey, &historicalData)
-	}
-
-	if len(historicalData) == 0 {
-		var err error
-		historicalData, err = h.marketData.GetHistoricalData(c.Request.Context(), req.Symbol, fromDate, time.Now())
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "data_error", "message": "Failed to fetch market data for " + req.Symbol})
-			return
-		}
-		if h.cache != nil {
-			_ = h.cache.Set(c.Request.Context(), cacheKey, historicalData, 4*time.Hour)
-		}
+	// Always fetch fresh data for backtesting — no caching to ensure
+	// different lookback periods always produce accurate results
+	historicalData, err := h.marketData.GetHistoricalData(c.Request.Context(), req.Symbol, fromDate, toDate)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "data_error", "message": "Failed to fetch market data for " + req.Symbol})
+		return
 	}
 
 	stockData := &strategies.StockData{

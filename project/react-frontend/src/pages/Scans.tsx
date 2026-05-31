@@ -388,7 +388,9 @@ function NewScanModal({
   onSubmit: (data: { name: string; strategy_ids: string[] }) => void;
 }) {
   const [name, setName] = useState(`Scan ${new Date().toLocaleDateString()}`);
-  const [selectedStrategies, setSelectedStrategies] = useState<string[]>([]);
+  const [selectedStrategies, setSelectedStrategies] = useState<string[]>(
+    strategies.map((s) => s.id) // Auto-select all by default
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -440,7 +442,22 @@ function NewScanModal({
             </div>
 
             <div>
-              <label className="label">Select Strategies</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="label mb-0">Select Strategies</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedStrategies.length === strategies.length) {
+                      setSelectedStrategies([]);
+                    } else {
+                      setSelectedStrategies(strategies.map((s) => s.id));
+                    }
+                  }}
+                  className="text-xs font-medium text-primary-500 hover:text-primary-400 transition-colors"
+                >
+                  {selectedStrategies.length === strategies.length ? 'Deselect All' : 'Select All'}
+                </button>
+              </div>
               <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
                 {strategies.map((strategy) => (
                   <button

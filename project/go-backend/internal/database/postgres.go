@@ -78,6 +78,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&models.ScanStrategy{},
 		&models.ScanResult{},
 		&models.Report{},
+		&models.StockPrice{},
 	)
 	if err != nil {
 		return fmt.Errorf("failed to run migrations: %w", err)

@@ -51,8 +51,8 @@ export function About() {
   ];
 
   const stats = [
-    { value: '500+', label: 'NSE Stocks', icon: <TrendingUp className="w-5 h-5" /> },
-    { value: '4+', label: 'Strategies', icon: <Target className="w-5 h-5" /> },
+    { value: '174', label: 'NSE Stocks', icon: <TrendingUp className="w-5 h-5" /> },
+    { value: '11', label: 'Strategies', icon: <Target className="w-5 h-5" /> },
     { value: '99.9%', label: 'Uptime', icon: <Zap className="w-5 h-5" /> },
     { value: '24/7', label: 'Support', icon: <Users className="w-5 h-5" /> },
   ];
@@ -207,7 +207,7 @@ export function About() {
           </div>
           
           <div className={cn(
-            "card p-8 md:p-10 max-w-3xl mx-auto",
+            "card p-8 md:p-10",
             theme === 'dark' 
               ? "bg-gradient-to-br from-surface-800/80 to-surface-900/80" 
               : "bg-gradient-to-br from-white to-surface-50"

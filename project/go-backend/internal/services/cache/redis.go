@@ -60,6 +60,7 @@ func (c *RedisCache) Close() error {
 }
 
 func MarketDataKey(symbol string) string {
+
 	today := time.Now().Format("2006-01-02")
 	return fmt.Sprintf("marketdata:%s:%s", symbol, today)
 }

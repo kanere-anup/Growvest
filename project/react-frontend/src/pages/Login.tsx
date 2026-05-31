@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { Logo } from '@/components/ui/Logo';
-import { Mail, Lock, AlertCircle, Loader2, Sparkles, Sun, Moon } from 'lucide-react';
+import { Mail, Lock, AlertCircle, Loader2, Sparkles, Sun, Moon, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { LoginCredentials } from '@/types';
 
@@ -15,6 +15,7 @@ export function Login() {
   const location = useLocation();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
 
@@ -87,7 +88,7 @@ export function Login() {
           </p>
           
           <div className="flex flex-wrap gap-4">
-            {['Real-time Data', '4+ Strategies', 'NSE Coverage'].map((feature, index) => (
+            {['Real-time Data', '11 Strategies', '174 NSE Stocks'].map((feature, index) => (
               <div 
                 key={index}
                 className={cn(
@@ -192,9 +193,9 @@ export function Login() {
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-tertiary" />
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    className={cn("input pl-11", errors.password && "input-error")}
+                    className={cn("input pl-11 pr-11", errors.password && "input-error")}
                     {...register('password', {
                       required: 'Password is required',
                       minLength: {
@@ -203,6 +204,13 @@ export function Login() {
                       },
                     })}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-theme-tertiary hover:text-theme-secondary transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
                 {errors.password && (
                   <p className="mt-1.5 text-sm text-danger-500">{errors.password.message}</p>

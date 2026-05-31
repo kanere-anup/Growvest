@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { strategiesApi, scansApi, analyticsApi } from '@/services/api';
+import { strategiesApi, scansApi, analyticsApi, stocksApi } from '@/services/api';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useTheme } from '@/context/ThemeContext';
 import {
@@ -17,6 +17,9 @@ import {
   Clock,
   Zap,
   Rocket,
+  Database,
+  Calendar,
+  FlaskConical,
 } from 'lucide-react';
 import { formatDateTime, formatDuration, cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -52,6 +55,16 @@ export function Dashboard() {
   const { data: analytics, isLoading: analyticsLoading } = useQuery({
     queryKey: ['analytics-performance'],
     queryFn: () => analyticsApi.getPerformance(30),
+  });
+
+  const { data: stocksData } = useQuery({
+    queryKey: ['stocks-count'],
+    queryFn: () => stocksApi.list({ limit: 1 }),
+  });
+
+  const { data: topStocks } = useQuery({
+    queryKey: ['top-stocks-dashboard'],
+    queryFn: () => analyticsApi.getTopStocks({ days: 30, limit: 5 }),
   });
 
   const isLoading = strategiesLoading || userStrategiesLoading || scansLoading || analyticsLoading;
@@ -103,12 +116,12 @@ export function Dashboard() {
           <div className="stat-card animate-slide-up">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl icon-wrapper-primary flex items-center justify-center">
-                <Layers className="w-6 h-6 text-primary-500" />
+                <Database className="w-6 h-6 text-primary-500" />
               </div>
               <div>
-                <p className="text-sm text-theme-secondary">Available Strategies</p>
+                <p className="text-sm text-theme-secondary">Total Stocks</p>
                 <p className="text-2xl font-bold text-theme-primary">
-                  {isLoading ? '-' : strategies?.length || 0}
+                  {stocksData?.total || 174}
                 </p>
               </div>
             </div>
@@ -122,7 +135,7 @@ export function Dashboard() {
               <div>
                 <p className="text-sm text-theme-secondary">Enabled Strategies</p>
                 <p className="text-2xl font-bold text-theme-primary">
-                  {isLoading ? '-' : enabledStrategies}
+                  {isLoading ? '-' : `${enabledStrategies} / ${strategies?.length || 0}`}
                 </p>
               </div>
             </div>
@@ -134,9 +147,9 @@ export function Dashboard() {
                 <Scan className="w-6 h-6 text-info-500" />
               </div>
               <div>
-                <p className="text-sm text-theme-secondary">Recent Scans</p>
+                <p className="text-sm text-theme-secondary">Total Scans Run</p>
                 <p className="text-2xl font-bold text-theme-primary">
-                  {isLoading ? '-' : recentScans.length}
+                  {isLoading ? '-' : scansData?.total || recentScans.length}
                 </p>
               </div>
             </div>
@@ -145,16 +158,38 @@ export function Dashboard() {
           <div className="stat-card animate-slide-up animate-delay-300">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl icon-wrapper-warning flex items-center justify-center">
-                <BarChart3 className="w-6 h-6 text-warning-500" />
+                <Calendar className="w-6 h-6 text-warning-500" />
               </div>
               <div>
-                <p className="text-sm text-theme-secondary">Completed Scans</p>
-                <p className="text-2xl font-bold text-theme-primary">
-                  {isLoading ? '-' : completedScans}
+                <p className="text-sm text-theme-secondary">Last Scan</p>
+                <p className="text-lg font-bold text-theme-primary">
+                  {isLoading ? '-' : recentScans.length > 0 ? formatDateTime(recentScans[0].created_at) : 'Never'}
                 </p>
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="flex flex-wrap gap-3 animate-slide-up animate-delay-100">
+          <Link to="/scans">
+            <button className="btn-primary">
+              <PlayCircle className="w-4 h-4" />
+              New Scan
+            </button>
+          </Link>
+          <Link to="/backtest">
+            <button className="btn-secondary">
+              <FlaskConical className="w-4 h-4" />
+              Run Backtest
+            </button>
+          </Link>
+          <Link to="/chart">
+            <button className="btn-secondary">
+              <BarChart3 className="w-4 h-4" />
+              View Charts
+            </button>
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -176,8 +211,9 @@ export function Dashboard() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {strategies?.slice(0, 4).map((strategy) => {
-                    const isConfigured = userStrategies?.some((us) => us.strategy_id === strategy.id);
+                  {strategies?.map((strategy) => {
+                    const userStrat = userStrategies?.find((us) => us.strategy_id === strategy.id);
+                    const isConfigured = userStrat?.is_enabled ?? false;
                     return (
                       <div
                         key={strategy.id}
@@ -282,6 +318,51 @@ export function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* Market Overview - Top Stocks */}
+        {topStocks && topStocks.length > 0 && (
+          <div className="card animate-slide-up animate-delay-300">
+            <div className="card-header flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-theme-primary flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-success-500" />
+                Market Overview — Top 5 Stocks (30 Days)
+              </h2>
+              <Link to="/analytics" className="text-sm text-primary-500 hover:text-primary-400 flex items-center gap-1 transition-colors">
+                Full Analytics <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+            <div className="card-body p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className={cn(
+                      "border-b",
+                      theme === 'dark' ? "border-surface-800 bg-surface-800/30" : "border-surface-200 bg-surface-50"
+                    )}>
+                      <th className="px-6 py-3 text-left font-semibold text-theme-secondary text-xs uppercase tracking-wider">#</th>
+                      <th className="px-6 py-3 text-left font-semibold text-theme-secondary text-xs uppercase tracking-wider">Symbol</th>
+                      <th className="px-6 py-3 text-left font-semibold text-theme-secondary text-xs uppercase tracking-wider">Hits</th>
+                      <th className="px-6 py-3 text-left font-semibold text-theme-secondary text-xs uppercase tracking-wider">Avg Score</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {topStocks.slice(0, 5).map((stock, idx) => (
+                      <tr key={stock.symbol} className={cn(
+                        "border-b transition-colors",
+                        theme === 'dark' ? "border-surface-800/50 hover:bg-surface-800/30" : "border-surface-100 hover:bg-surface-50"
+                      )}>
+                        <td className="px-6 py-3 text-theme-tertiary font-medium">#{idx + 1}</td>
+                        <td className="px-6 py-3 font-mono font-bold text-theme-primary">{stock.symbol}</td>
+                        <td className="px-6 py-3 font-semibold text-primary-500">{stock.hits}</td>
+                        <td className="px-6 py-3 text-theme-primary">{stock.avg_score?.toFixed(1)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Strategy Performance */}
         {analytics && analytics.strategies && analytics.strategies.length > 0 && (

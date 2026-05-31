@@ -45,6 +45,7 @@ export function Stocks() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [sectorFilter, setSectorFilter] = useState('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'ltp_high' | 'ltp_low' | 'mcap'>('name');
   const pageSize = 24;
 
   const isAdmin = user?.role === 'admin';
@@ -61,11 +62,17 @@ export function Stocks() {
     }),
   });
 
-  // Fetch all stocks for sector list
+  // Fetch all stocks for sector list and active count
   const { data: allStocksData } = useQuery({
     queryKey: ['stocks-all-sectors'],
     queryFn: () => stocksApi.list({ limit: 200, active: true }),
     staleTime: 300000,
+  });
+
+  // Fetch active stock count (separate query so it updates on edit)
+  const { data: activeStocksData } = useQuery({
+    queryKey: ['stocks-active-count'],
+    queryFn: () => stocksApi.list({ limit: 1, active: true }),
   });
 
   const sectors = [...new Set((allStocksData?.items || []).map(s => s.sector).filter(Boolean))].sort();
@@ -93,6 +100,8 @@ export function Stocks() {
       stocksApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stocks'] });
+      queryClient.invalidateQueries({ queryKey: ['stocks-active-count'] });
+      queryClient.invalidateQueries({ queryKey: ['stocks-all-sectors'] });
       toast.success('Stock updated successfully');
       setShowModal(false);
       setEditingStock(null);
@@ -175,13 +184,26 @@ export function Stocks() {
     }
   };
 
-  const stocks = data?.items || [];
+  const rawStocks = data?.items || [];
   const total = data?.total || 0;
+
+  // Client-side sort
+  const stocks = [...rawStocks].sort((a, b) => {
+    const metaA = (a.metadata || {}) as Record<string, unknown>;
+    const metaB = (b.metadata || {}) as Record<string, unknown>;
+    const ltpA = (metaA['last_price'] as number) || 0;
+    const ltpB = (metaB['last_price'] as number) || 0;
+    switch (sortBy) {
+      case 'ltp_high': return ltpB - ltpA;
+      case 'ltp_low': return ltpA - ltpB;
+      case 'mcap': return (b.market_cap || 0) - (a.market_cap || 0);
+      default: return (a.name || a.symbol).localeCompare(b.name || b.symbol);
+    }
+  });
   const totalPages = Math.ceil(total / pageSize);
 
-  // Calculate stats from visible stocks
-  const activeCount = stocks.filter(s => s.is_active).length;
-  const inactiveCount = stocks.filter(s => !s.is_active).length;
+  // Active count from dedicated query so it reflects toggling active/inactive
+  const activeCount = activeStocksData?.total ?? total;
   const delistedCount = stocks.filter(s =>
     s.metadata && (s.metadata as Record<string, unknown>)['possibly_delisted']
   ).length;
@@ -387,6 +409,25 @@ export function Stocks() {
                 ))}
               </select>
 
+              <div className="w-px h-4 bg-theme-secondary/20" />
+
+              {/* Sort */}
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className={cn(
+                  "text-xs rounded-lg px-3 py-1.5 border transition-all cursor-pointer",
+                  theme === 'dark'
+                    ? 'bg-surface-800 border-surface-700 text-theme-secondary'
+                    : 'bg-surface-100 border-surface-200 text-theme-secondary'
+                )}
+              >
+                <option value="name">Sort: Name (A-Z)</option>
+                <option value="ltp_high">Sort: LTP High→Low</option>
+                <option value="ltp_low">Sort: LTP Low→High</option>
+                <option value="mcap">Sort: Market Cap</option>
+              </select>
+
               {(sectorFilter || activeFilter !== 'all' || search) && (
                 <button
                   onClick={() => {
@@ -483,7 +524,7 @@ export function Stocks() {
                       <th>Name</th>
                       <th>Sector</th>
                       <th className="text-right">Market Cap</th>
-                      <th className="text-right">Last Price</th>
+                      <th className="text-right">LTP</th>
                       <th>Status</th>
                       {isAdmin && <th>Actions</th>}
                     </tr>
@@ -531,7 +572,7 @@ export function Stocks() {
                           </td>
                           <td className="text-right font-mono text-sm">
                             {lastPrice ? (
-                              <span className="text-theme-primary">₹{lastPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+                              <span className="text-theme-primary">₹{lastPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             ) : '-'}
                           </td>
                           <td>
@@ -719,7 +760,7 @@ function StockCard({
           {lastPrice ? (
             <div>
               <p className="text-lg font-bold font-mono text-theme-primary">
-                ₹{lastPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                ₹{lastPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
           ) : (

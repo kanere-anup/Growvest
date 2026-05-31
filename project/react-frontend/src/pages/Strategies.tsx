@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { strategiesApi } from '@/services/api';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useTheme } from '@/context/ThemeContext';
-import { Settings, Check, X, Loader2, Plus, Sparkles, Layers, Trash2, PlayCircle } from 'lucide-react';
+import { Settings, Check, X, Loader2, Plus, Sparkles, Layers, PlayCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
 import type { Strategy, UserStrategy } from '@/types';
@@ -53,18 +53,6 @@ export function Strategies() {
     },
     onError: () => {
       toast.error('Failed to update strategy');
-    },
-  });
-
-  // Delete user strategy mutation
-  const deleteMutation = useMutation({
-    mutationFn: strategiesApi.deleteUserStrategy,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-strategies'] });
-      toast.success('Strategy removed');
-    },
-    onError: () => {
-      toast.error('Failed to remove strategy');
     },
   });
 
@@ -192,35 +180,23 @@ export function Strategies() {
                     {/* Actions */}
                     <div className="flex items-center gap-3">
                       {isConfigured ? (
-                        <>
-                          <button
-                            className={cn(
-                              "flex-1",
-                              isEnabled ? "btn-secondary" : "btn-primary"
-                            )}
-                            onClick={() => handleToggleStrategy(userStrategy!)}
-                            disabled={updateMutation.isPending}
-                          >
-                            {updateMutation.isPending ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : isEnabled ? (
-                              <X className="w-4 h-4" />
-                            ) : (
-                              <Check className="w-4 h-4" />
-                            )}
-                            {isEnabled ? 'Disable' : 'Enable'}
-                          </button>
-                          <button
-                            className="btn-ghost p-2.5 text-danger-500 hover:bg-danger-500/10"
-                            onClick={() => {
-                              if (confirm('Remove this strategy configuration?')) {
-                                deleteMutation.mutate(userStrategy!.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </>
+                        <button
+                          className={cn(
+                            "flex-1",
+                            isEnabled ? "btn-secondary" : "btn-primary"
+                          )}
+                          onClick={() => handleToggleStrategy(userStrategy!)}
+                          disabled={updateMutation.isPending}
+                        >
+                          {updateMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : isEnabled ? (
+                            <X className="w-4 h-4" />
+                          ) : (
+                            <Check className="w-4 h-4" />
+                          )}
+                          {isEnabled ? 'Disable' : 'Enable'}
+                        </button>
                       ) : (
                         <button
                           className="btn-primary flex-1"

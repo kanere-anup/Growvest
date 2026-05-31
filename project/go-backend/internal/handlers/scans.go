@@ -450,25 +450,71 @@ func (h *ScanHandler) ExportScanResults(c *gin.Context) {
 		return
 	}
 
-	// Generate CSV content
-	csvContent := "Symbol,Strategy,Price,Signal,Score,Date\n"
-	for _, r := range results {
-		csvContent += fmt.Sprintf("%s,%s,%.2f,%s,%.2f,%s\n",
-			r.Symbol,
-			r.Strategy.DisplayName,
-			r.CurrentPrice,
-			r.Signal,
-			r.Score,
-			r.CreatedAt.Format("2006-01-02 15:04:05"),
-		)
-	}
-
-	// Set headers for file download
+	// Generate rich CSV content with scan metadata header
 	scanName := scan.Name
 	if scanName == "" {
 		scanName = scan.ID.String()[:8]
 	}
-	filename := fmt.Sprintf("scan_results_%s_%s.csv", scanName, time.Now().Format("20060102"))
+
+	csvContent := ""
+	// Metadata section
+	csvContent += fmt.Sprintf("# GrowVest Scan Report\n")
+	csvContent += fmt.Sprintf("# Scan Name:,%s\n", scanName)
+	csvContent += fmt.Sprintf("# Scan Date:,%s\n", scan.CreatedAt.Format("2006-01-02 15:04:05"))
+	csvContent += fmt.Sprintf("# Status:,%s\n", scan.Status)
+	csvContent += fmt.Sprintf("# Total Results:,%d\n", len(results))
+	if scan.ExecutionTimeMs > 0 {
+		csvContent += fmt.Sprintf("# Execution Time:,%.2fs\n", float64(scan.ExecutionTimeMs)/1000.0)
+	}
+	csvContent += fmt.Sprintf("# Exported:,%s\n", time.Now().Format("2006-01-02 15:04:05"))
+	csvContent += "#\n"
+
+	// Summary by strategy
+	strategyMap := make(map[string]int)
+	buyCount, sellCount := 0, 0
+	for _, r := range results {
+		strategyMap[r.Strategy.DisplayName]++
+		if r.Signal == "buy" {
+			buyCount++
+		} else if r.Signal == "sell" {
+			sellCount++
+		}
+	}
+	csvContent += fmt.Sprintf("# Buy Signals:,%d\n", buyCount)
+	csvContent += fmt.Sprintf("# Sell Signals:,%d\n", sellCount)
+	csvContent += "#\n"
+
+	// Strategy breakdown
+	csvContent += "# Strategy Breakdown:\n"
+	for stratName, count := range strategyMap {
+		csvContent += fmt.Sprintf("#   %s:,%d results\n", stratName, count)
+	}
+	csvContent += "#\n"
+
+	// Data header
+	csvContent += "Rank,Symbol,Strategy,Signal,Score,Current Price (₹),Sector,Date\n"
+
+	// Data rows sorted by score
+	for i, r := range results {
+		sector := ""
+		if r.Stock.Sector != "" {
+			sector = r.Stock.Sector
+		}
+		// Escape strategy name in case it contains commas
+		strategyName := r.Strategy.DisplayName
+		csvContent += fmt.Sprintf("%d,%s,\"%s\",%s,%.2f,%.2f,%s,%s\n",
+			i+1,
+			r.Symbol,
+			strategyName,
+			r.Signal,
+			r.Score,
+			r.CurrentPrice,
+			sector,
+			r.CreatedAt.Format("2006-01-02 15:04:05"),
+		)
+	}
+
+	filename := fmt.Sprintf("scan_report_%s_%s.csv", scanName, time.Now().Format("20060102"))
 
 	c.Header("Content-Description", "File Transfer")
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
@@ -602,15 +648,15 @@ func toScanResponse(s models.Scan) ScanResponse {
 		FailedStocks:     s.FailedStocks,
 		ExecutionTimeMs:  s.ExecutionTimeMs,
 		ErrorMessage:     s.ErrorMessage,
-		CreatedAt:        s.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:        s.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 
 	if s.StartedAt != nil {
-		startedAt := s.StartedAt.Format("2006-01-02T15:04:05Z")
+		startedAt := s.StartedAt.UTC().Format("2006-01-02T15:04:05Z")
 		resp.StartedAt = &startedAt
 	}
 	if s.CompletedAt != nil {
-		completedAt := s.CompletedAt.Format("2006-01-02T15:04:05Z")
+		completedAt := s.CompletedAt.UTC().Format("2006-01-02T15:04:05Z")
 		resp.CompletedAt = &completedAt
 	}
 
@@ -626,7 +672,7 @@ func toScanResultResponse(r models.ScanResult) ScanResultResponse {
 		Signal:       r.Signal,
 		ResultData:   r.ResultData,
 		Strategy:     toStrategyResponse(r.Strategy),
-		CreatedAt:    r.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:    r.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 }
 

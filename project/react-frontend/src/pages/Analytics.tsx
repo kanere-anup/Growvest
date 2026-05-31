@@ -195,20 +195,20 @@ export function Analytics() {
                   <div className="card-body">
                     <ResponsiveContainer width="100%" height={320}>
                       <BarChart data={chartData} barGap={8}>
-                        <CartesianGrid 
-                          strokeDasharray="3 3" 
-                          stroke={chartColors.grid} 
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke={chartColors.grid}
                           vertical={false}
                         />
-                        <XAxis 
-                          dataKey="name" 
-                          stroke={chartColors.text} 
+                        <XAxis
+                          dataKey="name"
+                          stroke={chartColors.text}
                           fontSize={12}
                           tickLine={false}
                           axisLine={false}
                         />
-                        <YAxis 
-                          stroke={chartColors.text} 
+                        <YAxis
+                          stroke={chartColors.text}
                           fontSize={12}
                           tickLine={false}
                           axisLine={false}
@@ -219,25 +219,21 @@ export function Analytics() {
                           formatter={(value: number, name: string) => [
                             <span key={name} style={{ color: theme === 'dark' ? '#f1f5f9' : '#0f172a' }}>
                               {value}
-                            </span>, 
-                            name === 'results' ? 'Results' : 'Unique Stocks'
+                            </span>,
+                            name === 'results' ? 'Total Results' : `Avg Score`
                           ]}
                           labelFormatter={(label) => chartData.find((d) => d.name === label)?.fullName || label}
                         />
-                        <Bar 
-                          dataKey="results" 
-                          fill="#10b981" 
-                          radius={[6, 6, 0, 0]} 
-                          name="Results"
-                        />
-                        <Bar 
-                          dataKey="stocks" 
-                          fill="#3b82f6" 
-                          radius={[6, 6, 0, 0]} 
-                          name="Unique Stocks"
+                        <Bar
+                          dataKey="results"
+                          fill="#10b981"
+                          radius={[6, 6, 0, 0]}
+                          name="results"
+                          label={{ position: 'top', fill: chartColors.text, fontSize: 11 }}
                         />
                       </BarChart>
                     </ResponsiveContainer>
+                    <p className="text-xs text-theme-tertiary text-center mt-2">Total scan results per strategy</p>
                   </div>
                 </div>
 

@@ -88,6 +88,7 @@ func main() {
 	stockRepo := repository.NewStockRepository(db)
 	strategyRepo := repository.NewStrategyRepository(db)
 	scanRepo := repository.NewScanRepository(db)
+	stockPriceRepo := repository.NewStockPriceRepository(db)
 	log.Debug().Msg("Repositories initialized")
 
 	// Initialize Redis cache
@@ -137,7 +138,7 @@ func main() {
 	healthHandler := handlers.NewHealthHandler(db)
 	backtestEngine := backtest.NewEngine(strategies.DefaultRegistry)
 	backtestHandler := handlers.NewBacktestHandler(backtestEngine, stockRepo, nseService, redisCache, strategies.DefaultRegistry, log)
-	chartHandler := handlers.NewChartHandler(nseService, redisCache, log)
+	chartHandler := handlers.NewChartHandler(nseService, stockRepo, stockPriceRepo, log)
 
 	// Initialize stock sync service + daily scheduler
 	stockSyncService := stocksync.NewStockSyncService(stockRepo, log)

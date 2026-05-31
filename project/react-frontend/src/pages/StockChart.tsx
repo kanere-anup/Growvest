@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -23,6 +23,23 @@ interface OHLCVData {
   low: number;
   close: number;
   volume: number;
+}
+
+function formatPrice(price: number): string {
+  return `₹${price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatDateLabel(dateStr: string): string {
+  const d = new Date(dateStr);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${d.getDate()} ${months[d.getMonth()]} '${String(d.getFullYear()).slice(2)}`;
+}
+
+function formatDateFull(dateStr: string): string {
+  const d = new Date(dateStr);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 export function StockChart() {
@@ -65,7 +82,7 @@ export function StockChart() {
               {chartData.length > 0 && (
                 <div className="flex items-center gap-3">
                   <span className="text-2xl font-bold text-theme-primary font-mono">
-                    ₹{lastPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                    {formatPrice(lastPrice)}
                   </span>
                   <span className={cn(
                     'flex items-center gap-1 text-sm font-semibold px-2.5 py-1 rounded-lg',
@@ -87,6 +104,7 @@ export function StockChart() {
                 { label: '6M', days: 180 },
                 { label: '1Y', days: 365 },
                 { label: '2Y', days: 730 },
+                { label: '5Y', days: 1825 },
               ].map((tf) => (
                 <button
                   key={tf.label}
@@ -130,11 +148,11 @@ export function StockChart() {
             <div className="flex items-center gap-6 text-sm">
               <div className="flex items-center gap-1.5">
                 <span className="text-theme-tertiary">High:</span>
-                <span className="font-mono font-medium text-green-500">₹{highPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+                <span className="font-mono font-medium text-green-500">{formatPrice(highPrice)}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-theme-tertiary">Low:</span>
-                <span className="font-mono font-medium text-red-500">₹{lowPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+                <span className="font-mono font-medium text-red-500">{formatPrice(lowPrice)}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-theme-tertiary">Avg Vol:</span>
@@ -172,7 +190,7 @@ export function StockChart() {
               <p className="text-theme-tertiary text-sm">Check the symbol and try again</p>
             </div>
           ) : chartData.length > 0 ? (
-            <CandlestickChart data={chartData} chartType={chartType} theme={theme} />
+            <InteractiveCandlestickChart data={chartData} chartType={chartType} theme={theme} />
           ) : (
             <div className="h-96 flex flex-col items-center justify-center gap-3">
               <div className={cn(
@@ -202,7 +220,8 @@ export function StockChart() {
   );
 }
 
-function CandlestickChart({
+// The chart uses a split layout: scrollable candle area + fixed right Y-axis
+function InteractiveCandlestickChart({
   data,
   chartType,
   theme,
@@ -211,160 +230,314 @@ function CandlestickChart({
   chartType: 'candlestick' | 'line';
   theme: string;
 }) {
-  const width = 900;
-  const height = 400;
-  const padding = { top: 20, right: 60, bottom: 30, left: 10 };
-  const chartW = width - padding.left - padding.right;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [hoverInfo, setHoverInfo] = useState<{
+    index: number;
+    mouseY: number; // in SVG coords
+    mousePrice: number;
+  } | null>(null);
+
+  const yAxisWidth = 80;
+  const svgWidth = Math.max(900, data.length * 6);
+  const height = 420;
+  const padding = { top: 20, right: 4, bottom: 35, left: 10 };
+  const chartW = svgWidth - padding.left - padding.right;
   const chartH = height - padding.top - padding.bottom;
 
   const { minPrice, maxPrice, candleWidth } = useMemo(() => {
     const prices = data.flatMap((d) => [d.high, d.low]);
     const min = Math.min(...prices) * 0.998;
     const max = Math.max(...prices) * 1.002;
-    const cw = Math.max(1, Math.min(8, (chartW / data.length) * 0.7));
+    const cw = Math.max(2, Math.min(8, (chartW / data.length) * 0.7));
     return { minPrice: min, maxPrice: max, candleWidth: cw };
   }, [data, chartW]);
 
   const priceRange = maxPrice - minPrice;
-  const toY = (price: number) =>
-    padding.top + chartH - ((price - minPrice) / priceRange) * chartH;
-  const toX = (i: number) =>
-    padding.left + (i / data.length) * chartW + chartW / data.length / 2;
+  const toY = useCallback((price: number) =>
+    padding.top + chartH - ((price - minPrice) / priceRange) * chartH,
+    [chartH, minPrice, priceRange]
+  );
+  const fromY = useCallback((y: number) =>
+    minPrice + ((padding.top + chartH - y) / chartH) * priceRange,
+    [chartH, minPrice, priceRange]
+  );
+  const toX = useCallback((i: number) =>
+    padding.left + (i / data.length) * chartW + chartW / data.length / 2,
+    [data.length, chartW]
+  );
 
-  const yTicks = 6;
-  const yLabels = Array.from({ length: yTicks + 1 }, (_, i) => {
+  const yTicks = 8;
+  const yLabels = useMemo(() => Array.from({ length: yTicks + 1 }, (_, i) => {
     const price = minPrice + (priceRange * i) / yTicks;
     return { price, y: toY(price) };
-  });
+  }), [minPrice, priceRange, toY]);
 
-  const xTickInterval = Math.max(1, Math.floor(data.length / 8));
+  const xTickInterval = Math.max(1, Math.floor(data.length / 12));
 
-  if (chartType === 'line') {
-    const linePath = data
-      .map((d, i) => `${i === 0 ? 'M' : 'L'} ${toX(i)},${toY(d.close)}`)
-      .join(' ');
+  const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const scaleX = svgWidth / rect.width;
+    const scaleY = height / rect.height;
+    const mouseX = (e.clientX - rect.left) * scaleX;
+    const mouseYsvg = (e.clientY - rect.top) * scaleY;
 
-    const areaPath = `${linePath} L ${toX(data.length - 1)},${padding.top + chartH} L ${toX(0)},${padding.top + chartH} Z`;
+    // Clamp mouseY to chart area
+    const clampedY = Math.max(padding.top, Math.min(padding.top + chartH, mouseYsvg));
+    const mousePrice = fromY(clampedY);
 
-    const isPositive = data[data.length - 1].close >= data[0].close;
-    const color = isPositive ? '#10b981' : '#ef4444';
+    // Find closest data index
+    let closest = 0;
+    let minDist = Infinity;
+    for (let i = 0; i < data.length; i++) {
+      const dist = Math.abs(toX(i) - mouseX);
+      if (dist < minDist) {
+        minDist = dist;
+        closest = i;
+      }
+    }
+    setHoverInfo({ index: closest, mouseY: clampedY, mousePrice });
+  }, [data.length, toX, svgWidth, height, chartH, fromY]);
 
-    return (
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
-        <defs>
-          <linearGradient id="lineAreaGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity={0.2} />
-            <stop offset="100%" stopColor={color} stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        {yLabels.map((tick, i) => (
-          <g key={i}>
-            <line
-              x1={padding.left} y1={tick.y}
-              x2={width - padding.right} y2={tick.y}
-              stroke={theme === 'dark' ? '#1e293b' : '#f1f5f9'}
-              strokeWidth={1}
-            />
-            <text
-              x={width - padding.right + 6} y={tick.y + 4}
-              fill={theme === 'dark' ? '#64748b' : '#94a3b8'}
-              fontSize={10}
-              fontFamily="ui-monospace, monospace"
-            >
-              ₹{tick.price.toFixed(0)}
-            </text>
-          </g>
-        ))}
-        {data.map((d, i) =>
-          i % xTickInterval === 0 ? (
-            <text key={i} x={toX(i)} y={height - 5} textAnchor="middle"
-              fill={theme === 'dark' ? '#64748b' : '#94a3b8'} fontSize={9}
-              fontFamily="ui-monospace, monospace">
-              {d.date.slice(5)}
-            </text>
-          ) : null
-        )}
-        <path d={areaPath} fill="url(#lineAreaGrad)" />
-        <path d={linePath} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  }
+  const handleMouseLeave = useCallback(() => {
+    setHoverInfo(null);
+  }, []);
 
-  return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
+  const hoverData = hoverInfo ? data[hoverInfo.index] : null;
+  const prevData = hoverInfo && hoverInfo.index > 0 ? data[hoverInfo.index - 1] : null;
+  const dayChange = hoverData && prevData ? ((hoverData.close - prevData.close) / prevData.close * 100) : null;
+
+  const gridColor = theme === 'dark' ? '#1e293b' : '#f1f5f9';
+  const textColor = theme === 'dark' ? '#64748b' : '#94a3b8';
+  const crosshairColor = theme === 'dark' ? '#475569' : '#94a3b8';
+
+  // Shared grid + axis rendering
+  const renderGrid = () => (
+    <>
       {yLabels.map((tick, i) => (
-        <g key={i}>
-          <line
-            x1={padding.left} y1={tick.y}
-            x2={width - padding.right} y2={tick.y}
-            stroke={theme === 'dark' ? '#1e293b' : '#f1f5f9'}
-            strokeWidth={1}
-          />
-          <text
-            x={width - padding.right + 6} y={tick.y + 4}
-            fill={theme === 'dark' ? '#64748b' : '#94a3b8'}
-            fontSize={10}
-            fontFamily="ui-monospace, monospace"
-          >
-            ₹{tick.price.toFixed(0)}
-          </text>
-        </g>
+        <line key={i} x1={padding.left} y1={tick.y} x2={svgWidth - padding.right} y2={tick.y} stroke={gridColor} strokeWidth={1} />
       ))}
+    </>
+  );
+
+  const renderXLabels = () => (
+    <>
       {data.map((d, i) =>
         i % xTickInterval === 0 ? (
-          <text key={i} x={toX(i)} y={height - 5} textAnchor="middle"
-            fill={theme === 'dark' ? '#64748b' : '#94a3b8'} fontSize={9}
-            fontFamily="ui-monospace, monospace">
-            {d.date.slice(5)}
+          <text key={i} x={toX(i)} y={height - 5} textAnchor="middle" fill={textColor} fontSize={9} fontFamily="ui-monospace, monospace">
+            {formatDateLabel(d.date)}
           </text>
         ) : null
       )}
-      {data.map((d, i) => {
-        const x = toX(i);
-        const isGreen = d.close >= d.open;
-        const color = isGreen ? '#10b981' : '#ef4444';
-        const bodyTop = toY(Math.max(d.open, d.close));
-        const bodyBottom = toY(Math.min(d.open, d.close));
-        const bodyHeight = Math.max(1, bodyBottom - bodyTop);
+    </>
+  );
 
-        return (
-          <g key={i}>
-            <line x1={x} y1={toY(d.high)} x2={x} y2={toY(d.low)} stroke={color} strokeWidth={1} />
-            <rect
-              x={x - candleWidth / 2} y={bodyTop}
-              width={candleWidth} height={bodyHeight}
-              fill={color} stroke={color} strokeWidth={0.5} rx={0.5}
-            />
-          </g>
-        );
-      })}
+  const renderCrosshair = () => {
+    if (!hoverInfo || !hoverData) return null;
+    return (
+      <>
+        {/* Vertical dotted line at candle */}
+        <line
+          x1={toX(hoverInfo.index)} y1={padding.top}
+          x2={toX(hoverInfo.index)} y2={padding.top + chartH}
+          stroke={crosshairColor} strokeWidth={1} strokeDasharray="4 3"
+        />
+        {/* Horizontal dotted line follows mouse Y exactly */}
+        <line
+          x1={padding.left} y1={hoverInfo.mouseY}
+          x2={svgWidth - padding.right} y2={hoverInfo.mouseY}
+          stroke={crosshairColor} strokeWidth={1} strokeDasharray="4 3"
+        />
+        {/* Date label on X-axis bottom */}
+        <rect
+          x={toX(hoverInfo.index) - 42} y={padding.top + chartH + 2}
+          width={84} height={18} rx={4}
+          fill={theme === 'dark' ? '#334155' : '#1e293b'}
+        />
+        <text
+          x={toX(hoverInfo.index)} y={padding.top + chartH + 14}
+          textAnchor="middle" fill="#f8fafc" fontSize={9} fontFamily="ui-monospace, monospace"
+        >
+          {formatDateLabel(hoverData.date)}
+        </text>
+      </>
+    );
+  };
+
+  // Render OHLCV info bar (positioned above chart, outside scroll)
+  const renderInfoBar = () => {
+    if (!hoverData) return null;
+    return (
+      <div className="flex items-center gap-4 text-xs font-mono mb-1 min-h-[18px]">
+        <span className="text-theme-tertiary">{formatDateFull(hoverData.date)}</span>
+        <span className="text-theme-secondary">O: <span className="text-theme-primary">{hoverData.open.toFixed(2)}</span></span>
+        <span className="text-theme-secondary">H: <span className="text-green-500">{hoverData.high.toFixed(2)}</span></span>
+        <span className="text-theme-secondary">L: <span className="text-red-500">{hoverData.low.toFixed(2)}</span></span>
+        <span className="text-theme-secondary">C: <span className="text-theme-primary">{hoverData.close.toFixed(2)}</span></span>
+        <span className="text-theme-secondary">Vol: <span className="text-theme-primary">{(hoverData.volume / 1000).toFixed(0)}K</span></span>
+        {dayChange !== null && (
+          <span className={dayChange >= 0 ? 'text-green-500' : 'text-red-500'}>
+            {dayChange >= 0 ? '+' : ''}{dayChange.toFixed(2)}%
+          </span>
+        )}
+      </div>
+    );
+  };
+
+  // Fixed Y-axis component (rendered outside the scrollable area)
+  const renderYAxis = () => (
+    <svg viewBox={`0 0 ${yAxisWidth} ${height}`} width={yAxisWidth} className="flex-shrink-0" style={{ height: 'auto', aspectRatio: `${yAxisWidth}/${height}` }}>
+      {/* Tick labels */}
+      {yLabels.map((tick, i) => (
+        <text key={i} x={8} y={tick.y + 4} fill={textColor} fontSize={10} fontFamily="ui-monospace, monospace">
+          {tick.price.toFixed(2)}
+        </text>
+      ))}
+      {/* Mouse price label — follows cursor Y */}
+      {hoverInfo && (
+        <>
+          <rect
+            x={0} y={hoverInfo.mouseY - 10}
+            width={yAxisWidth - 2} height={20} rx={4}
+            fill={theme === 'dark' ? '#334155' : '#1e293b'}
+          />
+          <text
+            x={6} y={hoverInfo.mouseY + 4}
+            fill="#f8fafc" fontSize={10} fontWeight="bold" fontFamily="ui-monospace, monospace"
+          >
+            ₹{hoverInfo.mousePrice.toFixed(2)}
+          </text>
+        </>
+      )}
     </svg>
+  );
+
+  // Render candles or line
+  const renderChartContent = () => {
+    if (chartType === 'line') {
+      const linePath = data
+        .map((d, i) => `${i === 0 ? 'M' : 'L'} ${toX(i)},${toY(d.close)}`)
+        .join(' ');
+      const areaPath = `${linePath} L ${toX(data.length - 1)},${padding.top + chartH} L ${toX(0)},${padding.top + chartH} Z`;
+      const isPositive = data[data.length - 1].close >= data[0].close;
+      const color = isPositive ? '#10b981' : '#ef4444';
+
+      return (
+        <>
+          <defs>
+            <linearGradient id="lineAreaGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity={0.2} />
+              <stop offset="100%" stopColor={color} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <path d={areaPath} fill="url(#lineAreaGrad)" />
+          <path d={linePath} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+          {/* Dot on hovered point */}
+          {hoverInfo && (
+            <circle cx={toX(hoverInfo.index)} cy={toY(data[hoverInfo.index].close)} r={4} fill={color} stroke="white" strokeWidth={2} />
+          )}
+        </>
+      );
+    }
+
+    // Candlestick
+    return (
+      <>
+        {data.map((d, i) => {
+          const x = toX(i);
+          const isGreen = d.close >= d.open;
+          const color = isGreen ? '#10b981' : '#ef4444';
+          const bodyTop = toY(Math.max(d.open, d.close));
+          const bodyBottom = toY(Math.min(d.open, d.close));
+          const bodyHeight = Math.max(1, bodyBottom - bodyTop);
+          const isHovered = hoverInfo?.index === i;
+
+          return (
+            <g key={i} opacity={hoverInfo !== null && !isHovered ? 0.6 : 1}>
+              <line x1={x} y1={toY(d.high)} x2={x} y2={toY(d.low)} stroke={color} strokeWidth={isHovered ? 2 : 1} />
+              <rect
+                x={x - candleWidth / 2} y={bodyTop}
+                width={candleWidth} height={bodyHeight}
+                fill={color} stroke={color} strokeWidth={0.5} rx={0.5}
+              />
+            </g>
+          );
+        })}
+      </>
+    );
+  };
+
+  return (
+    <div className="relative">
+      {/* OHLCV info bar — always visible above chart */}
+      <div className="min-h-[18px] mb-1">
+        {renderInfoBar()}
+      </div>
+
+      {/* Chart area: scrollable left + fixed Y-axis right */}
+      <div className="flex">
+        {/* Scrollable chart area */}
+        <div ref={containerRef} className="flex-1 overflow-x-auto" style={{ scrollbarWidth: 'thin' }}>
+          <div style={{ width: svgWidth }}>
+            <svg
+              ref={svgRef}
+              viewBox={`0 0 ${svgWidth} ${height}`}
+              className="w-full h-auto cursor-crosshair"
+              style={{ display: 'block' }}
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+            >
+              {renderGrid()}
+              {renderXLabels()}
+              {renderChartContent()}
+              {renderCrosshair()}
+            </svg>
+          </div>
+        </div>
+
+        {/* Fixed Y-axis on right */}
+        <div className="flex-shrink-0" style={{ width: yAxisWidth }}>
+          {renderYAxis()}
+        </div>
+      </div>
+    </div>
   );
 }
 
 function VolumeChart({ data }: { data: OHLCVData[]; theme?: string }) {
-  const width = 900;
+  const svgWidth = Math.max(900, data.length * 6);
   const height = 80;
-  const padding = { left: 10, right: 60 };
-  const chartW = width - padding.left - padding.right;
+  const yAxisWidth = 80;
+  const padding = { left: 10, right: 4 };
+  const chartW = svgWidth - padding.left - padding.right;
   const maxVol = Math.max(...data.map((d) => d.volume));
   const barWidth = Math.max(1, Math.min(8, (chartW / data.length) * 0.7));
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
-      {data.map((d, i) => {
-        const x = padding.left + (i / data.length) * chartW + chartW / data.length / 2;
-        const barH = maxVol > 0 ? (d.volume / maxVol) * (height - 10) : 0;
-        const isGreen = d.close >= d.open;
-        return (
-          <rect key={i}
-            x={x - barWidth / 2} y={height - barH}
-            width={barWidth} height={barH}
-            fill={isGreen ? '#10b98140' : '#ef444440'}
-            rx={0.5}
-          />
-        );
-      })}
-    </svg>
+    <div className="flex">
+      <div className="flex-1 overflow-x-auto" style={{ scrollbarWidth: 'thin' }}>
+        <div style={{ width: svgWidth, minWidth: '100%' }}>
+          <svg viewBox={`0 0 ${svgWidth} ${height}`} className="w-full h-auto" style={{ display: 'block' }}>
+            {data.map((d, i) => {
+              const x = padding.left + (i / data.length) * chartW + chartW / data.length / 2;
+              const barH = maxVol > 0 ? (d.volume / maxVol) * (height - 10) : 0;
+              const isGreen = d.close >= d.open;
+              return (
+                <rect key={i}
+                  x={x - barWidth / 2} y={height - barH}
+                  width={barWidth} height={barH}
+                  fill={isGreen ? '#10b98140' : '#ef444440'}
+                  rx={0.5}
+                />
+              );
+            })}
+          </svg>
+        </div>
+      </div>
+      {/* Spacer to align with price chart Y-axis */}
+      <div className="flex-shrink-0" style={{ width: yAxisWidth }} />
+    </div>
   );
 }

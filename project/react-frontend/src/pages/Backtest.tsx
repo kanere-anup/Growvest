@@ -40,6 +40,12 @@ export function Backtest() {
     mutationFn: backtestApi.run,
   });
 
+  // Reset stale results when inputs change so user doesn't see old data
+  const handleSymbolChange = (s: string) => { setSymbol(s); mutation.reset(); };
+  const handleStrategyChange = (s: string) => { setSelectedStrategy(s); mutation.reset(); };
+  const handleLookbackChange = (d: number) => { setLookbackDays(d); mutation.reset(); };
+  const handleCapitalChange = (c: number) => { setInitialCapital(c); mutation.reset(); };
+
   const handleRun = () => {
     if (!symbol || !selectedStrategy) return;
     mutation.mutate({
@@ -93,7 +99,7 @@ export function Backtest() {
                 <Target className="w-3.5 h-3.5 text-primary-500" />
                 Symbol
               </label>
-              <StockSearch value={symbol} onChange={setSymbol} />
+              <StockSearch value={symbol} onChange={handleSymbolChange} />
             </div>
             <div className="relative z-10">
               <label className="label flex items-center gap-2">
@@ -102,7 +108,7 @@ export function Backtest() {
               </label>
               <select
                 value={selectedStrategy}
-                onChange={(e) => setSelectedStrategy(e.target.value)}
+                onChange={(e) => handleStrategyChange(e.target.value)}
                 className="select"
               >
                 <option value="">Select strategy</option>
@@ -125,7 +131,7 @@ export function Backtest() {
               <input
                 type="number"
                 value={initialCapital}
-                onChange={(e) => setInitialCapital(Number(e.target.value))}
+                onChange={(e) => handleCapitalChange(Number(e.target.value))}
                 className="input"
                 min={1000}
                 step={10000}
@@ -138,7 +144,7 @@ export function Backtest() {
               </label>
               <select
                 value={lookbackDays}
-                onChange={(e) => setLookbackDays(Number(e.target.value))}
+                onChange={(e) => handleLookbackChange(Number(e.target.value))}
                 className="select"
               >
                 <option value={90}>3 Months</option>

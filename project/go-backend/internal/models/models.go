@@ -339,3 +339,33 @@ const (
 	ReportTypePDF     = "pdf"
 	ReportTypeSummary = "summary"
 )
+
+// StockPrice represents daily OHLCV data for a stock
+type StockPrice struct {
+	ID       uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	StockID  uuid.UUID `gorm:"type:uuid;index:idx_stock_price_stock_date,unique;not null" json:"stock_id"`
+	Symbol   string    `gorm:"type:varchar(20);index;not null" json:"symbol"`
+	Date     time.Time `gorm:"type:date;index:idx_stock_price_stock_date,unique;not null" json:"date"`
+	Open     float64   `gorm:"type:decimal(12,4)" json:"open"`
+	High     float64   `gorm:"type:decimal(12,4)" json:"high"`
+	Low      float64   `gorm:"type:decimal(12,4)" json:"low"`
+	Close    float64   `gorm:"type:decimal(12,4)" json:"close"`
+	Volume   int64     `json:"volume"`
+	AdjClose float64   `gorm:"type:decimal(12,4)" json:"adj_close"`
+
+	// Relationships
+	Stock Stock `gorm:"foreignKey:StockID" json:"-"`
+}
+
+// TableName sets the table name for StockPrice
+func (StockPrice) TableName() string {
+	return "stock_prices"
+}
+
+// BeforeCreate generates UUID before insert
+func (s *StockPrice) BeforeCreate(tx *gorm.DB) error {
+	if s.ID == uuid.Nil {
+		s.ID = uuid.New()
+	}
+	return nil
+}

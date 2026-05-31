@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { Logo } from '@/components/ui/Logo';
-import { Mail, Lock, User, AlertCircle, Loader2, Shield, BarChart3, Zap, Sun, Moon, CheckCircle } from 'lucide-react';
+import { Mail, Lock, User, AlertCircle, Loader2, Shield, BarChart3, Zap, Sun, Moon, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { RegisterCredentials } from '@/types';
 
@@ -18,6 +18,8 @@ export function Register() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const {
     register,
@@ -238,9 +240,9 @@ export function Register() {
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-tertiary" />
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    className={cn("input pl-11", errors.password && "input-error")}
+                    className={cn("input pl-11 pr-11", errors.password && "input-error")}
                     {...register('password', {
                       required: 'Password is required',
                       minLength: {
@@ -249,6 +251,13 @@ export function Register() {
                       },
                     })}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-theme-tertiary hover:text-theme-secondary transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
                 {/* Password strength meter */}
                 {password && (
@@ -280,17 +289,27 @@ export function Register() {
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-tertiary" />
                   <input
-                    type="password"
+                    type={showConfirmPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    className={cn("input pl-11", errors.confirmPassword && "input-error")}
+                    className={cn("input pl-11 pr-11", errors.confirmPassword && "input-error")}
                     {...register('confirmPassword', {
                       required: 'Please confirm your password',
                       validate: (value) => value === password || 'Passwords do not match',
                     })}
                   />
-                  {watch('confirmPassword') && watch('confirmPassword') === password && (
-                    <CheckCircle className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-theme-tertiary hover:text-theme-secondary transition-colors"
+                  >
+                    {watch('confirmPassword') && watch('confirmPassword') === password ? (
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                    ) : showConfirmPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
                 </div>
                 {errors.confirmPassword && (
                   <p className="mt-1.5 text-sm text-danger-500">{errors.confirmPassword.message}</p>
