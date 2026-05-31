@@ -1,0 +1,74 @@
+[
+  {
+    "id": "luxury-villa-whitefield",
+    "title": "Luxury Villa - Whitefield",
+    "category": "Residential",
+    "location": "Whitefield, Bangalore",
+    "description": "Modern luxury villa with contemporary architecture and premium finishes",
+    "area": "3500 sq.ft",
+    "status": "Completed",
+    "year": 2024,
+    "image": "/projects/placeholder-villa.jpg",
+    "features": ["4 BHK", "Modern Design", "Smart Home", "Landscape Garden"]
+  },
+  {
+    "id": "commercial-complex-hsr",
+    "title": "Commercial Complex - HSR Layout",
+    "category": "Commercial",
+    "location": "HSR Layout, Bangalore",
+    "description": "Multi-story commercial complex with modern amenities",
+    "area": "12000 sq.ft",
+    "status": "Completed",
+    "year": 2023,
+    "image": "/projects/placeholder-commercial.jpg",
+    "features": ["G+4 Structure", "Retail Spaces", "Office Units", "Parking"]
+  },
+  {
+    "id": "interior-project-koramangala",
+    "title": "Premium Interior - Koramangala",
+    "category": "Interiors",
+    "location": "Koramangala, Bangalore",
+    "description": "Complete interior renovation with modern design elements",
+    "area": "2200 sq.ft",
+    "status": "Completed",
+    "year": 2024,
+    "image": "/projects/placeholder-interior.jpg",
+    "features": ["Modern Kitchen", "Living Area", "Bedrooms", "Lighting Design"]
+  },
+  {
+    "id": "residential-complex-sarjapur",
+    "title": "Residential Complex - Sarjapur",
+    "category": "Residential",
+    "location": "Sarjapur Road, Bangalore",
+    "description": "Gated community with multiple villas and amenities",
+    "area": "45000 sq.ft",
+    "status": "Ongoing",
+    "year": 2024,
+    "image": "/projects/placeholder-complex.jpg",
+    "features": ["20 Villas", "Clubhouse", "Swimming Pool", "Security"]
+  },
+  {
+    "id": "structural-renovation-indiranagar",
+    "title": "Structural Renovation - Indiranagar",
+    "category": "Structural",
+    "location": "Indiranagar, Bangalore",
+    "description": "Complete structural strengthening and renovation project",
+    "area": "2800 sq.ft",
+    "status": "Completed",
+    "year": 2023,
+    "image": "/projects/placeholder-structural.jpg",
+    "features": ["Foundation Repair", "Column Jacketing", "New Roof", "Waterproofing"]
+  },
+  {
+    "id": "warehouse-attibele",
+    "title": "Industrial Warehouse - Attibele",
+    "category": "Commercial",
+    "location": "Attibele, Bangalore",
+    "description": "Large-scale industrial warehouse with modern facilities",
+    "area": "25000 sq.ft",
+    "status": "Completed",
+    "year": 2023,
+    "image": "/projects/placeholder-warehouse.jpg",
+    "features": ["Pre-Engineered", "Loading Docks", "Office Area", "Fire Safety"]
+  }
+]

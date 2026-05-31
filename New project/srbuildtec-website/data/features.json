@@ -1,0 +1,50 @@
+[
+  {
+    "id": "experienced-engineers",
+    "title": "Experienced Engineers",
+    "description": "Certified professionals with 10+ years of expertise",
+    "icon": "graduation"
+  },
+  {
+    "id": "quality-materials",
+    "title": "Quality Materials",
+    "description": "Premium grade materials from trusted suppliers",
+    "icon": "award"
+  },
+  {
+    "id": "safety-first",
+    "title": "Safety First Approach",
+    "description": "Strict safety protocols and compliance standards",
+    "icon": "shield"
+  },
+  {
+    "id": "transparent-communication",
+    "title": "Transparent Communication",
+    "description": "Regular updates and clear documentation",
+    "icon": "message"
+  },
+  {
+    "id": "on-time-delivery",
+    "title": "On-Time Delivery",
+    "description": "Committed to project timelines and deadlines",
+    "icon": "clock"
+  },
+  {
+    "id": "cost-effective",
+    "title": "Cost Effective Solutions",
+    "description": "Value engineering without compromising quality",
+    "icon": "dollar"
+  },
+  {
+    "id": "modern-practices",
+    "title": "Modern Engineering Practices",
+    "description": "Latest technology and construction methods",
+    "icon": "cpu"
+  },
+  {
+    "id": "customer-satisfaction",
+    "title": "Customer Satisfaction",
+    "description": "100% client satisfaction guarantee",
+    "icon": "smile"
+  }
+]

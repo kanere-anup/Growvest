@@ -1,0 +1,59 @@
+{
+  "name": "SR BUILDTEC",
+  "tagline": "Building Excellence, Engineering The Future",
+  "description": "Your Trusted Partner in Construction, Design, Project Management & Engineering Solutions",
+  "about": "SR BUILDTEC is a trusted construction and engineering company specializing in residential and commercial construction, structural and architectural design, project management, and turnkey engineering solutions. With over a decade of experience, we deliver excellence in every project.",
+  "mission": "To deliver world-class construction and engineering solutions that exceed client expectations while maintaining the highest standards of quality, safety, and sustainability.",
+  "vision": "To be the most trusted name in construction and engineering, recognized for innovation, reliability, and exceptional craftsmanship.",
+  "coreValues": [
+    {
+      "title": "Quality First",
+      "description": "Uncompromising standards in every project"
+    },
+    {
+      "title": "Innovation",
+      "description": "Modern engineering practices and solutions"
+    },
+    {
+      "title": "Integrity",
+      "description": "Transparent and honest in all dealings"
+    },
+    {
+      "title": "Safety",
+      "description": "Zero-compromise approach to workplace safety"
+    }
+  ],
+  "stats": [
+    {
+      "number": 100,
+      "suffix": "+",
+      "label": "Projects Completed"
+    },
+    {
+      "number": 50,
+      "suffix": "+",
+      "label": "Happy Clients"
+    },
+    {
+      "number": 10,
+      "suffix": "+",
+      "label": "Years Experience"
+    },
+    {
+      "number": 100,
+      "suffix": "%",
+      "label": "Quality Commitment"
+    }
+  ],
+  "contact": {
+    "phone": "8660326541",
+    "email": "srbuildtec.blr@gmail.com",
+    "address": "Bangalore, Karnataka, India",
+    "whatsapp": "918660326541"
+  },
+  "social": {
+    "instagram": "https://www.instagram.com/srbuildtec?igsh=MWZvdWNkanB1M2Z0MQ==",
+    "facebook": "https://www.facebook.com/share/1E4LGLbP85/",
+    "youtube": "https://youtube.com/@srbuildtec?si=oVejPI3v2U2nPH2k"
+  }
+}

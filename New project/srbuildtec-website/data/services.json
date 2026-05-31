@@ -1,0 +1,86 @@
+[
+  {
+    "id": "structural-drawings",
+    "title": "Structural Drawings",
+    "description": "Detailed structural engineering drawings with precise calculations and specifications for safe, durable construction.",
+    "icon": "building",
+    "features": ["Load Analysis", "Foundation Design", "Steel Detailing", "CAD Drawings"]
+  },
+  {
+    "id": "architectural-drawings",
+    "title": "Architectural Drawings",
+    "description": "Creative and functional architectural designs that blend aesthetics with practicality for your dream spaces.",
+    "icon": "drafting",
+    "features": ["Floor Plans", "Elevations", "3D Visualization", "Interior Layouts"]
+  },
+  {
+    "id": "boq-preparation",
+    "title": "BOQ Preparation",
+    "description": "Comprehensive Bill of Quantities with accurate material estimates and cost optimization strategies.",
+    "icon": "calculator",
+    "features": ["Material Estimation", "Cost Analysis", "Rate Schedules", "Budget Planning"]
+  },
+  {
+    "id": "structural-analysis",
+    "title": "Structural Analysis",
+    "description": "Advanced structural analysis using modern software to ensure stability and compliance with engineering codes.",
+    "icon": "analytics",
+    "features": ["Load Calculations", "FEM Analysis", "Seismic Design", "Wind Analysis"]
+  },
+  {
+    "id": "drywall-partitions",
+    "title": "Drywall Partitions",
+    "description": "Modern drywall partition solutions for efficient space division with soundproofing and fire safety.",
+    "icon": "wall",
+    "features": ["Gypsum Boards", "Metal Studs", "Soundproofing", "Fire Rated"]
+  },
+  {
+    "id": "landscaping",
+    "title": "Landscaping",
+    "description": "Beautiful landscape design and execution to enhance outdoor spaces with sustainable green solutions.",
+    "icon": "tree",
+    "features": ["Garden Design", "Hardscaping", "Irrigation", "Green Spaces"]
+  },
+  {
+    "id": "fire-safety",
+    "title": "Fire & Safety Planning",
+    "description": "Comprehensive fire safety systems and emergency planning to protect lives and property.",
+    "icon": "shield",
+    "features": ["Fire Detection", "Sprinkler Systems", "Emergency Exits", "Safety Compliance"]
+  },
+  {
+    "id": "interior-planning",
+    "title": "Interior Planning",
+    "description": "Innovative interior design solutions that maximize functionality while creating stunning visual appeal.",
+    "icon": "home",
+    "features": ["Space Planning", "Furniture Design", "Lighting Design", "Material Selection"]
+  },
+  {
+    "id": "project-management",
+    "title": "Project Management",
+    "description": "End-to-end project management ensuring timely delivery, quality control, and cost optimization.",
+    "icon": "clipboard",
+    "features": ["Timeline Planning", "Resource Management", "Quality Control", "Cost Monitoring"]
+  },
+  {
+    "id": "metal-fabrication",
+    "title": "Metal Fabrication & Design",
+    "description": "Custom metal fabrication and design services for structural and decorative applications.",
+    "icon": "wrench",
+    "features": ["Steel Fabrication", "Custom Metalwork", "Welding", "Metal Finishing"]
+  },
+  {
+    "id": "residential-construction",
+    "title": "Residential Construction",
+    "description": "Complete residential construction services from foundation to finishing for your dream home.",
+    "icon": "house",
+    "features": ["New Construction", "Renovations", "Additions", "Turnkey Projects"]
+  },
+  {
+    "id": "commercial-construction",
+    "title": "Commercial Construction",
+    "description": "Professional commercial construction services for offices, retail spaces, and industrial facilities.",
+    "icon": "building2",
+    "features": ["Office Buildings", "Retail Spaces", "Warehouses", "Industrial Units"]
+  }
+]

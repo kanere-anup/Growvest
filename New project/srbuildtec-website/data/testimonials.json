@@ -1,0 +1,47 @@
+[
+  {
+    "id": 1,
+    "name": "Rajesh Kumar",
+    "company": "Homeowner",
+    "rating": 5,
+    "text": "SR BUILDTEC transformed our dream home into reality. Their attention to detail and commitment to quality is unmatched. The team was professional, punctual, and delivered exactly what was promised.",
+    "project": "Luxury Villa Project",
+    "image": "/testimonials/placeholder-1.jpg"
+  },
+  {
+    "id": 2,
+    "name": "Priya Sharma",
+    "company": "Business Owner",
+    "rating": 5,
+    "text": "Exceptional work on our commercial complex. The structural design was flawless, and the project was completed ahead of schedule. Highly recommend SR BUILDTEC for commercial projects.",
+    "project": "Commercial Complex",
+    "image": "/testimonials/placeholder-2.jpg"
+  },
+  {
+    "id": 3,
+    "name": "Arun Patel",
+    "company": "Real Estate Developer",
+    "rating": 5,
+    "text": "We've partnered with SR BUILDTEC for multiple residential projects. Their engineering expertise and project management skills are top-notch. A reliable partner for any construction need.",
+    "project": "Residential Complex",
+    "image": "/testimonials/placeholder-3.jpg"
+  },
+  {
+    "id": 4,
+    "name": "Meera Reddy",
+    "company": "Homeowner",
+    "rating": 5,
+    "text": "The interior design and execution by SR BUILDTEC exceeded our expectations. They understood our vision and brought it to life with premium materials and perfect finishing.",
+    "project": "Interior Renovation",
+    "image": "/testimonials/placeholder-4.jpg"
+  },
+  {
+    "id": 5,
+    "name": "Vikram Singh",
+    "company": "Factory Owner",
+    "rating": 5,
+    "text": "Our warehouse project was handled with utmost professionalism. The structural analysis and design were thorough, ensuring long-term durability. Great experience working with the team.",
+    "project": "Industrial Warehouse",
+    "image": "/testimonials/placeholder-5.jpg"
+  }
+]
